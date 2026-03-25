@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Noughts & Crosses</title>
+<title>Battle of the Symbols</title>
 
 <style>
 body {
@@ -13,9 +13,28 @@ body {
   text-align: center;
 }
 
-h1 { margin-top: 25px; }
+/* TITLE */
+.title {
+  font-size: 48px;
+  font-weight: 900;
+  color: #38bdf8;
+  margin-top: 30px;
+  letter-spacing: 2px;
+}
 
-/* MENU */
+/* STREAK DISPLAY */
+#streakBox {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: #0f172a;
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 2px solid #38bdf8;
+  font-size: 18px;
+}
+
+/* MENUS */
 .menu {
   margin-top: 40px;
 }
@@ -35,10 +54,11 @@ button:hover {
   transform: scale(1.05);
 }
 
-/* DIFFICULTY COLOURS */
+/* DIFFICULTY */
 .easy { background: #22c55e; color: black; }
 .medium { background: #f59e0b; color: black; }
 .hard { background: #ef4444; color: white; }
+.impossible { background: #000; color: white; border: 2px solid white; }
 .pvp { background: #38bdf8; color: black; }
 
 /* BOARD */
@@ -62,9 +82,7 @@ button:hover {
   border-radius: 12px;
 }
 
-.cell:hover {
-  background: #334155;
-}
+.cell:hover { background: #334155; }
 
 .winning {
   background: #22c55e !important;
@@ -77,37 +95,48 @@ button:hover {
   min-height: 30px;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 </style>
 </head>
 
 <body>
 
-<h1>🎮 Noughts & Crosses</h1>
+<div id="streakBox">🔥 Streak: <span id="streak">0</span></div>
 
-<!-- MAIN MENU -->
-<div id="menu" class="menu">
-  <button class="pvp" onclick="startMode('pvp')">2 Player</button>
-  <button class="easy" onclick="showAI()">Play vs AI</button>
+<div id="menu">
+  <div class="title">BATTLE OF THE SYMBOLS!</div>
+
+  <div class="menu">
+    <button class="pvp" onclick="clickSound(); startMenu('pvp')">2 Player</button>
+    <button class="easy" onclick="clickSound(); showAI()">Play vs AI</button>
+  </div>
 </div>
 
-<!-- AI MENU -->
 <div id="aiMenu" class="menu hidden">
-  <button class="easy" onclick="startMode('easy')">Easy</button>
-  <button class="medium" onclick="startMode('medium')">Intermediate</button>
-  <button class="hard" onclick="startMode('hard')">Hard</button>
+  <button class="easy" onclick="clickSound(); startGame('easy')">Easy 🙂</button>
+  <button class="medium" onclick="clickSound(); startGame('medium')">Intermediate 😐</button>
+  <button class="hard" onclick="clickSound(); startGame('hard')">Hard 😡</button>
+  <button class="impossible" onclick="clickSound(); startGame('impossible')">Impossible 💀</button>
 </div>
 
-<!-- GAME -->
 <div id="game" class="hidden">
   <div class="board" id="board"></div>
   <div id="status"></div>
-  <button onclick="resetGame()">Restart</button>
+
+  <button onclick="clickSound(); resetGame()">Restart</button>
+  <button onclick="clickSound(); goBack()" style="background:#64748b; color:white;">⬅ Back</button>
 </div>
 
 <script>
+
+/* =========================
+   STREAK SYSTEM
+========================= */
+let streak = 0;
+
+/* =========================
+   GAME STATE
+========================= */
 let board = Array(9).fill("");
 let currentPlayer = "X";
 let mode = "pvp";
@@ -120,22 +149,42 @@ const winCombos = [
 ];
 
 /* =========================
-   MENU CONTROL
+   SOUND EFFECTS
 ========================= */
+function clickSound() {
+  let audio = new Audio("https://www.soundjay.com/buttons/sounds/button-16.mp3");
+  audio.volume = 0.3;
+  audio.play();
+}
+
+function moveSound() {
+  let audio = new Audio("https://www.soundjay.com/buttons/sounds/button-09.mp3");
+  audio.volume = 0.3;
+  audio.play();
+}
+
+/* =========================
+   MENU
+========================= */
+function startMenu(type) {
+  mode = type;
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("aiMenu").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  resetBoardOnly();
+}
+
 function showAI() {
   document.getElementById("menu").classList.add("hidden");
   document.getElementById("aiMenu").classList.remove("hidden");
 }
 
-function startMode(selectedMode) {
-  mode = selectedMode;
+function goBack() {
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
 
-  document.getElementById("menu").classList.add("hidden");
-  document.getElementById("aiMenu").classList.add("hidden");
-  document.getElementById("game").classList.remove("hidden");
-
-  createBoard();
-  updateStatus();
+  resetBoardOnly();
+  resetStreak();
 }
 
 /* =========================
@@ -149,18 +198,44 @@ function createBoard() {
     const cell = document.createElement("div");
     cell.classList.add("cell");
     cell.innerText = val;
-    cell.addEventListener("click", () => makeMove(i));
+    cell.onclick = () => makeMove(i);
     boardDiv.appendChild(cell);
   });
 }
 
 /* =========================
-   PLAYER MOVE
+   RESET
+========================= */
+function resetBoardOnly() {
+  board = Array(9).fill("");
+  currentPlayer = "X";
+  gameActive = true;
+  createBoard();
+  updateStatus();
+}
+
+function resetGame() {
+  resetBoardOnly();
+}
+
+function resetStreak() {
+  streak = 0;
+  updateStreak();
+}
+
+function updateStreak() {
+  document.getElementById("streak").innerText = streak;
+}
+
+/* =========================
+   MOVES
 ========================= */
 function makeMove(i) {
   if (!gameActive || board[i] !== "") return;
 
   board[i] = currentPlayer;
+  moveSound();
+
   checkGame();
 
   if (!gameActive) {
@@ -176,29 +251,26 @@ function makeMove(i) {
     currentPlayer = "O";
     createBoard();
     updateStatus();
-    setTimeout(aiMove, 300);
+    setTimeout(aiMove, 250);
   }
 }
 
 /* =========================
-   AI MOVE CONTROLLER
+   AI
 ========================= */
 function aiMove() {
   if (!gameActive) return;
 
   let move;
 
-  if (mode === "easy") {
-    move = easyAI();
-  } 
-  else if (mode === "medium") {
-    move = mediumAI();
-  } 
-  else {
-    move = hardAI();
-  }
+  if (mode === "easy") move = easyAI();
+  else if (mode === "medium") move = mediumAI();
+  else if (mode === "hard") move = hardAI();
+  else move = impossibleAI();
 
   board[move] = "O";
+  moveSound();
+
   currentPlayer = "X";
 
   checkGame();
@@ -206,41 +278,27 @@ function aiMove() {
   updateStatus();
 }
 
-/* =========================
-   EASY AI (weaker but not random only)
-========================= */
+/* EASY */
 function easyAI() {
-  // tries center first, then random
   if (board[4] === "") return 4;
-
-  let moves = board.map((v,i) => v === "" ? i : null).filter(v => v !== null);
-  return moves[Math.floor(Math.random() * moves.length)];
+  return randomMove();
 }
 
-/* =========================
-   MEDIUM AI (intermediate)
-   - blocks wins
-   - sometimes misses wins
-========================= */
+/* MEDIUM */
 function mediumAI() {
-  // 50% chance to play smart, 50% random
-  if (Math.random() < 0.5) {
-    let winMove = findBest("O");
-    if (winMove !== -1) return winMove;
+  if (Math.random() < 0.6) {
+    let win = findBest("O");
+    if (win !== -1) return win;
 
-    let blockMove = findBest("X");
-    if (blockMove !== -1) return blockMove;
+    let block = findBest("X");
+    if (block !== -1) return block;
 
     if (board[4] === "") return 4;
   }
-
-  let moves = board.map((v,i) => v === "" ? i : null).filter(v => v !== null);
-  return moves[Math.floor(Math.random() * moves.length)];
+  return randomMove();
 }
 
-/* =========================
-   HARD AI (strong logic)
-========================= */
+/* HARD */
 function hardAI() {
   let move = findBest("O");
   if (move !== -1) return move;
@@ -251,30 +309,61 @@ function hardAI() {
   if (board[4] === "") return 4;
 
   let corners = [0,2,6,8].filter(i => board[i] === "");
-  if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+  if (corners.length) return corners[Math.floor(Math.random()*corners.length)];
 
-  return easyAI();
+  return randomMove();
 }
 
-/* =========================
-   FIND WIN / BLOCK
-========================= */
-function findBest(player) {
-  for (let combo of winCombos) {
-    const [a,b,c] = combo;
-    const line = [board[a], board[b], board[c]];
+/* IMPOSSIBLE */
+function impossibleAI() {
+  return minimax(board, "O").index;
+}
 
-    if (line.filter(x => x === player).length === 2 && line.includes("")) {
-      if (board[a] === "") return a;
-      if (board[b] === "") return b;
-      if (board[c] === "") return c;
+/* MINIMAX */
+function minimax(newBoard, player) {
+  const avail = newBoard.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+
+  if (winner(newBoard,"X")) return {score:-10};
+  if (winner(newBoard,"O")) return {score:10};
+  if (avail.length===0) return {score:0};
+
+  let moves=[];
+
+  for(let i of avail){
+    let move={index:i};
+    newBoard[i]=player;
+
+    if(player==="O"){
+      move.score=minimax(newBoard,"X").score;
+    }else{
+      move.score=minimax(newBoard,"O").score;
     }
+
+    newBoard[i]="";
+    moves.push(move);
   }
-  return -1;
+
+  return moves.reduce((best,m)=>{
+    return player==="O"
+      ? (m.score>best.score?m:best)
+      : (m.score<best.score?m:best);
+  });
+}
+
+function winner(b,p){
+  return winCombos.some(([a,b2,c])=>
+    b[a]===p && b[b2]===p && b[c]===p
+  );
+}
+
+/* RANDOM */
+function randomMove(){
+  let moves = board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+  return moves[Math.floor(Math.random()*moves.length)];
 }
 
 /* =========================
-   WIN CHECK
+   WIN CHECK + STREAK
 ========================= */
 function checkGame() {
   for (let combo of winCombos) {
@@ -284,6 +373,13 @@ function checkGame() {
       gameActive = false;
       document.getElementById("status").innerText = board[a] + " wins!";
       highlight(combo);
+
+      if (board[a] === "X") {
+        streak++;
+        updateStreak();
+      } else {
+        resetStreak();
+      }
       return;
     }
   }
@@ -291,29 +387,27 @@ function checkGame() {
   if (!board.includes("")) {
     gameActive = false;
     document.getElementById("status").innerText = "Draw!";
+    resetStreak();
   }
 }
 
-function highlight(combo) {
-  const cells = document.querySelectorAll(".cell");
-  combo.forEach(i => cells[i].classList.add("winning"));
+function highlight(combo){
+  document.querySelectorAll(".cell")
+    .forEach(c=>c.classList.remove("winning"));
+
+  combo.forEach(i=>{
+    document.querySelectorAll(".cell")[i].classList.add("winning");
+  });
 }
 
 /* =========================
    UI
 ========================= */
-function updateStatus() {
-  if (gameActive) {
-    document.getElementById("status").innerText = "Turn: " + currentPlayer;
+function updateStatus(){
+  if(gameActive){
+    document.getElementById("status").innerText =
+      "Turn: " + currentPlayer;
   }
-}
-
-function resetGame() {
-  board = Array(9).fill("");
-  currentPlayer = "X";
-  gameActive = true;
-  createBoard();
-  updateStatus();
 }
 </script>
 
